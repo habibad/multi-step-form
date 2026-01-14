@@ -8,51 +8,16 @@
     
     let currentStep = 1;
     let formData = {};
-    let stripe, cardElement;
     let pricingData = {};
     let addonPricingData = {};
-    let paymentGateway = 'stripe';
     
     $(document).ready(function() {
         // Get pricing data from hidden fields
         try {
             pricingData = JSON.parse($('#pricing_data').val());
             addonPricingData = JSON.parse($('#addon_pricing_data').val());
-            paymentGateway = $('#payment_gateway').val() || 'stripe';
         } catch(e) {
             console.error('Error parsing pricing data:', e);
-        }
-        
-        // Initialize Stripe only if it's the selected gateway
-        if (paymentGateway === 'stripe' && typeof msfAjax !== 'undefined' && msfAjax.stripeKey) {
-            stripe = Stripe(msfAjax.stripeKey);
-            const elements = stripe.elements();
-            cardElement = elements.create('card', {
-                style: {
-                    base: {
-                        fontSize: '16px',
-                        color: '#32325d',
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                        '::placeholder': {
-                            color: '#aab7c4'
-                        }
-                    },
-                    invalid: {
-                        color: '#fa755a',
-                        iconColor: '#fa755a'
-                    }
-                }
-            });
-            cardElement.mount('#card-element');
-            
-            cardElement.on('change', function(event) {
-                const displayError = document.getElementById('card-errors');
-                if (event.error) {
-                    displayError.textContent = event.error.message;
-                } else {
-                    displayError.textContent = '';
-                }
-            });
         }
         
         // Set minimum date to today
@@ -70,10 +35,6 @@
             calculatePrice();
         });
         $('#service_date').on('change', updatePreviewDate);
-        $('#service_start_time, #service_end_time').on('change', function() {
-            validateTime();
-            updatePreviewTime();
-        });
         $('#square_footage').on('input', function() {
             calculateWorkers();
             calculatePrice();
@@ -85,11 +46,9 @@
         });
         
         // QuickBooks card formatting
-        if (paymentGateway === 'quickbooks') {
-            $('#qbo_card_number').on('input', formatCardNumber);
-            $('#qbo_card_exp').on('input', formatCardExpiry);
-            $('#qbo_card_cvc').on('input', formatCardCVC);
-        }
+        $('#qbo_card_number').on('input', formatCardNumber);
+        $('#qbo_card_exp').on('input', formatCardExpiry);
+        $('#qbo_card_cvc').on('input', formatCardCVC);
         
         // Navigation buttons
         $('.msf-btn-next').on('click', nextStep);
@@ -98,46 +57,6 @@
         // Form submission
         $('#msf-multistep-form').on('submit', handleSubmit);
     });
-    
-    function validateTime() {
-        const startTime = $('#service_start_time').val();
-        const endTime = $('#service_end_time').val();
-        
-        if (!startTime || !endTime) return true;
-        
-        // Convert to minutes for easier comparison
-        const startMinutes = timeToMinutes(startTime);
-        const endMinutes = timeToMinutes(endTime);
-        const minTime = timeToMinutes('07:00');
-        const maxTime = timeToMinutes('20:00');
-        
-        let isValid = true;
-        let errorMsg = '';
-        
-        if (startMinutes < minTime || startMinutes > maxTime) {
-            isValid = false;
-            errorMsg = 'Start time must be between 7:00 AM and 8:00 PM';
-        } else if (endMinutes < minTime || endMinutes > maxTime) {
-            isValid = false;
-            errorMsg = 'End time must be between 7:00 AM and 8:00 PM';
-        } else if (endMinutes <= startMinutes) {
-            isValid = false;
-            errorMsg = 'End time must be after start time';
-        }
-        
-        if (!isValid) {
-            alert(errorMsg);
-            $('#service_end_time').val('');
-            return false;
-        }
-        
-        return true;
-    }
-    
-    function timeToMinutes(time) {
-        const [hours, minutes] = time.split(':').map(Number);
-        return hours * 60 + minutes;
-    }
     
     function nextStep() {
         if (validateStep(currentStep)) {
@@ -183,13 +102,6 @@
                 $(this).removeClass('error');
             }
         });
-        
-        // Additional validation for step 2
-        if (step === 2 && isValid) {
-            if (!validateTime()) {
-                isValid = false;
-            }
-        }
         
         return isValid;
     }
@@ -301,33 +213,13 @@
         $('#preview-date').text($('#service_date').val() || '-');
     }
     
-    function updatePreviewTime() {
-        const startTime = $('#service_start_time').val();
-        const endTime = $('#service_end_time').val();
-        
-        if (startTime && endTime) {
-            const start = formatTime(startTime);
-            const end = formatTime(endTime);
-            $('#preview-time').text(start + ' - ' + end);
-        } else {
-            $('#preview-time').text('-');
-        }
-    }
-    
-    function formatTime(time) {
-        const [hours, minutes] = time.split(':');
-        const hour = parseInt(hours);
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
-        return displayHour + ':' + minutes + ' ' + ampm;
-    }
-    
     function updatePreviewFootage() {
         const footage = $('#square_footage').val();
         $('#preview-footage').text(footage ? footage + ' sq ft' : '-');
     }
     
     function updatePreviewWorkers() {
+        $('#workers').val(parseInt($('#workers').val()) || '-');
         $('#preview-workers').text($('#workers').val() || '-');
     }
     
@@ -355,9 +247,6 @@
             addons.push('Inside Fridge Cleaning (+$' + addonPricingData.fridge + ')');
         }
         
-        const startTime = formatTime($('#service_start_time').val());
-        const endTime = formatTime($('#service_end_time').val());
-        
         const reviewHtml = `
             <div class="msf-review-group">
                 <h4>Personal Information</h4>
@@ -370,7 +259,6 @@
                 <h4>Service Details</h4>
                 <p><strong>Cleaning Type:</strong> ${$('#cleaning_type').val()}</p>
                 <p><strong>Service Date:</strong> ${$('#service_date').val()}</p>
-                <p><strong>Service Time:</strong> ${startTime} - ${endTime}</p>
                 <p><strong>Square Footage:</strong> ${$('#square_footage').val()} sq ft</p>
                 <p><strong>Workers Needed:</strong> ${$('#workers').val()}</p>
                 <p><strong>Add-on Services:</strong> ${addons.length > 0 ? addons.join(', ') : 'None'}</p>
@@ -391,94 +279,7 @@
     
     async function handleSubmit(e) {
         e.preventDefault();
-        
-        if (paymentGateway === 'stripe') {
-            await handleStripeSubmit();
-        } else {
-            await handleQuickBooksSubmit();
-        }
-    }
-    
-    async function handleStripeSubmit() {
-        if (!stripe || !cardElement) {
-            alert('Payment system is not initialized. Please contact support.');
-            return;
-        }
-        
-        const submitButton = $('#submit-payment');
-        submitButton.prop('disabled', true).text('Processing...');
-        
-        // Create payment method
-        const {error, paymentMethod} = await stripe.createPaymentMethod({
-            type: 'card',
-            card: cardElement,
-            billing_details: {
-                name: $('#first_name').val() + ' ' + $('#last_name').val(),
-                email: $('#email').val(),
-                phone: $('#phone').val()
-            }
-        });
-        
-        if (error) {
-            $('#card-errors').text(error.message);
-            submitButton.prop('disabled', false).text('Pay $' + $('#final_price').text());
-            return;
-        }
-        
-        // Prepare form data
-        const formDataObj = new FormData();
-        formDataObj.append('action', 'msf_process_payment');
-        formDataObj.append('nonce', msfAjax.nonce);
-        formDataObj.append('first_name', $('#first_name').val());
-        formDataObj.append('last_name', $('#last_name').val());
-        formDataObj.append('phone', $('#phone').val());
-        formDataObj.append('email', $('#email').val());
-        formDataObj.append('street', $('#street').val());
-        formDataObj.append('city', $('#city').val());
-        formDataObj.append('zipcode', $('#zipcode').val());
-        formDataObj.append('cleaning_type', $('#cleaning_type').val());
-        formDataObj.append('service_date', $('#service_date').val());
-        formDataObj.append('service_start_time', $('#service_start_time').val());
-        formDataObj.append('service_end_time', $('#service_end_time').val());
-        formDataObj.append('square_footage', $('#square_footage').val());
-        formDataObj.append('workers', $('#workers').val());
-        formDataObj.append('addon_oven', $('#addon_oven').is(':checked') ? 1 : 0);
-        formDataObj.append('addon_fridge', $('#addon_fridge').is(':checked') ? 1 : 0);
-        formDataObj.append('base_price', $('#base_price').text());
-        formDataObj.append('addon_price', $('#addon_total').text());
-        formDataObj.append('total_price', $('#calculated_price').text());
-        formDataObj.append('payment_method_id', paymentMethod.id);
-        
-        // Add images
-        const files = $('#images')[0].files;
-        for (let i = 0; i < files.length; i++) {
-            formDataObj.append('images[]', files[i]);
-        }
-        
-        // Submit to server
-        $.ajax({
-            url: msfAjax.ajaxurl,
-            type: 'POST',
-            data: formDataObj,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    if (response.data.requires_action) {
-                        handleCardAction(response.data.payment_intent_client_secret);
-                    } else {
-                        showSuccess();
-                    }
-                } else {
-                    alert('Error: ' + response.data.message);
-                    submitButton.prop('disabled', false).text('Pay $' + $('#final_price').text());
-                }
-            },
-            error: function() {
-                alert('An error occurred. Please try again.');
-                submitButton.prop('disabled', false).text('Pay $' + $('#final_price').text());
-            }
-        });
+        await handleQuickBooksSubmit();
     }
     
     async function handleQuickBooksSubmit() {
@@ -524,8 +325,6 @@
         formDataObj.append('zipcode', $('#zipcode').val());
         formDataObj.append('cleaning_type', $('#cleaning_type').val());
         formDataObj.append('service_date', $('#service_date').val());
-        formDataObj.append('service_start_time', $('#service_start_time').val());
-        formDataObj.append('service_end_time', $('#service_end_time').val());
         formDataObj.append('square_footage', $('#square_footage').val());
         formDataObj.append('workers', $('#workers').val());
         formDataObj.append('addon_oven', $('#addon_oven').is(':checked') ? 1 : 0);
@@ -576,17 +375,6 @@
     
     function formatCardCVC(e) {
         e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
-    }
-    
-    async function handleCardAction(clientSecret) {
-        const {error, paymentIntent} = await stripe.handleCardAction(clientSecret);
-        
-        if (error) {
-            alert('Payment failed: ' + error.message);
-            $('#submit-payment').prop('disabled', false).text('Pay $' + $('#final_price').text());
-        } else if (paymentIntent.status === 'succeeded') {
-            showSuccess();
-        }
     }
     
     function showSuccess() {

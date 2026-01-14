@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Multistep Service Form
+ * Plugin Name: Payment and Service Form
  * Plugin URI: https://example.com
- * Description: A multistep form with live preview and Stripe payment integration
+ * Description: A multistep form with live preview and QuickBooks payment integration
  * Version: 1.0.0
  * Author: Md Anikur Rahman
  * Author URI: https://example.com

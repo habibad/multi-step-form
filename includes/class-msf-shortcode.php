@@ -18,7 +18,6 @@ class MSF_Shortcode {
         // Get pricing data
         $pricing = json_decode(get_option('msf_pricing'), true);
         $addon_pricing = json_decode(get_option('msf_addon_pricing'), true);
-        $payment_gateway = get_option('msf_payment_gateway', 'stripe');
         
         ob_start();
         ?>
@@ -45,7 +44,6 @@ class MSF_Shortcode {
                         <!-- Hidden pricing data -->
                         <input type="hidden" id="pricing_data" value='<?php echo esc_attr(json_encode($pricing)); ?>'>
                         <input type="hidden" id="addon_pricing_data" value='<?php echo esc_attr(json_encode($addon_pricing)); ?>'>
-                        <input type="hidden" id="payment_gateway" value='<?php echo esc_attr($payment_gateway); ?>'>
                         
                         <!-- Step 1: Personal Details -->
                         <div class="msf-step msf-step-1 active">
@@ -122,19 +120,6 @@ class MSF_Shortcode {
                                 <input type="date" id="service_date" name="service_date" required>
                             </div>
                             
-                            <div class="msf-form-row">
-                                <div class="msf-form-group">
-                                    <label for="service_start_time">Start Time *</label>
-                                    <input type="time" id="service_start_time" name="service_start_time" min="07:00" max="20:00" required>
-                                    <small>Available: 7:00 AM - 8:00 PM</small>
-                                </div>
-                                <div class="msf-form-group">
-                                    <label for="service_end_time">End Time *</label>
-                                    <input type="time" id="service_end_time" name="service_end_time" min="07:00" max="20:00" required>
-                                    <small>Available: 7:00 AM - 8:00 PM</small>
-                                </div>
-                            </div>
-                            
                             <div class="msf-form-group">
                                 <label for="square_footage">Square Footage (sq ft) *</label>
                                 <input type="number" id="square_footage" name="square_footage" min="1" required>
@@ -195,44 +180,45 @@ class MSF_Shortcode {
                             <div class="msf-payment-section">
                                 <h3>Payment Details</h3>
                                 
-                                <?php if ($payment_gateway === 'stripe'): ?>
-                                    <div id="stripe-payment-form">
-                                        <div id="card-element"></div>
-                                        <div id="card-errors" class="msf-error"></div>
+                                <div id="quickbooks-payment-form">
+                                    <?php 
+                                    $ac_number = is_ssl() ? 'cc-number' : 'off';
+                                    $ac_exp = is_ssl() ? 'cc-exp' : 'off';
+                                    $ac_cvc = is_ssl() ? 'cc-csc' : 'off';
+                                    ?>
+                                    <div class="msf-form-group">
+                                        <label for="qbo_card_number">Card Number *</label>
+                                        <input type="text" id="qbo_card_number" name="qbo_card_number" 
+                                               placeholder="0000 0000 0000 0000" required 
+                                               autocomplete="<?php echo $ac_number; ?>"
+                                               maxlength="19">
                                     </div>
-                                <?php else: ?>
-                                    <div id="quickbooks-payment-form">
+                                    
+                                    <div class="msf-form-row">
                                         <div class="msf-form-group">
-                                            <label for="qbo_card_number">Card Number *</label>
-                                            <input type="text" id="qbo_card_number" name="qbo_card_number" 
-                                                   placeholder="0000 0000 0000 0000" required 
-                                                   maxlength="19">
+                                            <label for="qbo_card_exp">Expiry (MM/YYYY) *</label>
+                                            <input type="text" id="qbo_card_exp" name="qbo_card_exp" 
+                                                   placeholder="MM/YYYY" required 
+                                                   autocomplete="<?php echo $ac_exp; ?>"
+                                                   maxlength="7">
                                         </div>
-                                        
-                                        <div class="msf-form-row">
-                                            <div class="msf-form-group">
-                                                <label for="qbo_card_exp">Expiry (MM/YYYY) *</label>
-                                                <input type="text" id="qbo_card_exp" name="qbo_card_exp" 
-                                                       placeholder="MM/YYYY" required 
-                                                       maxlength="7">
-                                            </div>
-                                            <div class="msf-form-group">
-                                                <label for="qbo_card_cvc">CVC *</label>
-                                                <input type="text" id="qbo_card_cvc" name="qbo_card_cvc" 
-                                                       placeholder="123" required 
-                                                       maxlength="4">
-                                            </div>
-                                        </div>
-                                        
                                         <div class="msf-form-group">
-                                            <label for="qbo_billing_address">Billing Address</label>
-                                            <input type="text" id="qbo_billing_address" name="qbo_billing_address" 
-                                                   placeholder="123 Main St">
+                                            <label for="qbo_card_cvc">CVC *</label>
+                                            <input type="text" id="qbo_card_cvc" name="qbo_card_cvc" 
+                                                   placeholder="123" required 
+                                                   autocomplete="<?php echo $ac_cvc; ?>"
+                                                   maxlength="4">
                                         </div>
-                                        
-                                        <div id="qbo-errors" class="msf-error"></div>
                                     </div>
-                                <?php endif; ?>
+                                    
+                                    <div class="msf-form-group">
+                                        <label for="qbo_billing_address">Billing Address</label>
+                                        <input type="text" id="qbo_billing_address" name="qbo_billing_address" 
+                                               placeholder="123 Main St">
+                                    </div>
+                                    
+                                    <div id="qbo-errors" class="msf-error"></div>
+                                </div>
                             </div>
                             
                             <div class="msf-form-buttons">
@@ -286,10 +272,6 @@ class MSF_Shortcode {
                                 <span class="msf-preview-value" id="preview-date">-</span>
                             </div>
                             <div class="msf-preview-item">
-                                <span class="msf-preview-label">Service Time:</span>
-                                <span class="msf-preview-value" id="preview-time">-</span>
-                            </div>
-                            <div class="msf-preview-item">
                                 <span class="msf-preview-label">Square Footage:</span>
                                 <span class="msf-preview-value" id="preview-footage">-</span>
                             </div>
@@ -312,9 +294,6 @@ class MSF_Shortcode {
             </div>
         </div>
         
-        <?php if ($payment_gateway === 'stripe'): ?>
-        <script src="https://js.stripe.com/v3/"></script>
-        <?php endif; ?>
         <?php
         return ob_get_clean();
     }

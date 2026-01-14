@@ -39,7 +39,6 @@ class MSF_Email {
         $message .= '<h3>Service Information</h3>';
         $message .= '<p><strong>Cleaning Type:</strong> ' . $submission->cleaning_type . '</p>';
         $message .= '<p><strong>Service Date:</strong> ' . $submission->service_date . '</p>';
-        $message .= '<p><strong>Service Time:</strong> ' . date('g:i A', strtotime($submission->service_start_time)) . ' - ' . date('g:i A', strtotime($submission->service_end_time)) . '</p>';
         $message .= '<p><strong>Square Footage:</strong> ' . $submission->square_footage . ' sq ft</p>';
         $message .= '<p><strong>Workers Needed:</strong> ' . $submission->workers . '</p>';
         $message .= '<p><strong>Add-on Services:</strong> ' . $addons_text . '</p>';
@@ -72,7 +71,6 @@ class MSF_Email {
         $message .= '<h3>Booking Details</h3>';
         $message .= '<p><strong>Cleaning Type:</strong> ' . $data['cleaning_type'] . '</p>';
         $message .= '<p><strong>Service Date:</strong> ' . $data['service_date'] . '</p>';
-        $message .= '<p><strong>Service Time:</strong> ' . date('g:i A', strtotime($data['service_start_time'])) . ' - ' . date('g:i A', strtotime($data['service_end_time'])) . '</p>';
         $message .= '<p><strong>Total Amount Paid:</strong> $' . number_format($data['total_price'], 2) . '</p>';
         
         $message .= '<p>We will contact you shortly to confirm the appointment.</p>';

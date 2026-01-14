@@ -46,12 +46,9 @@ class MSF_Admin {
     }
     
     public function register_settings() {
-        register_setting('msf_settings_group', 'msf_stripe_publishable_key');
-        register_setting('msf_settings_group', 'msf_stripe_secret_key');
         register_setting('msf_settings_group', 'msf_admin_email');
         register_setting('msf_settings_group', 'msf_pricing');
         register_setting('msf_settings_group', 'msf_addon_pricing');
-        register_setting('msf_settings_group', 'msf_payment_gateway');
         register_setting('msf_settings_group', 'msf_qbo_client_id');
         register_setting('msf_settings_group', 'msf_qbo_client_secret');
         register_setting('msf_settings_group', 'msf_qbo_base_url');
@@ -69,21 +66,151 @@ class MSF_Admin {
             echo '<div class="notice notice-success"><p>Submission deleted successfully.</p></div>';
         }
         
-        // Get all submissions
-        $submissions = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC");
+        // View single submission
+        if (isset($_GET['action']) && $_GET['action'] === 'view' && isset($_GET['id'])) {
+            $id = intval($_GET['id']);
+            $submission = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));
+            
+            if ($submission) {
+                $status_color = $submission->payment_status === 'completed' ? '#46b450' : '#ffb900';
+                ?>
+                <div class="wrap">
+                    <h1 class="wp-heading-inline">Submission #<?php echo esc_html($submission->id); ?></h1>
+                    <a href="?page=multistep-form" class="page-title-action">Back to Submissions</a>
+                    <hr class="wp-header-end">
+                    
+                    <div id="poststuff">
+                        <div id="post-body" class="metabox-holder columns-2">
+                            
+                            <!-- Main Content Column -->
+                            <div id="post-body-content">
+                                <!-- Customer Info -->
+                                <div class="postbox">
+                                    <div class="postbox-header"><h2 class="hndle">Customer Information</h2></div>
+                                    <div class="inside">
+                                        <table class="form-table" style="margin-top: 0;">
+                                            <tr>
+                                                <th scope="row">Full Name:</th>
+                                                <td><?php echo esc_html($submission->first_name . ' ' . $submission->last_name); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">Email Address:</th>
+                                                <td><a href="mailto:<?php echo esc_attr($submission->email); ?>"><?php echo esc_html($submission->email); ?></a></td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">Phone Number:</th>
+                                                <td><?php echo esc_html($submission->phone); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">Service Address:</th>
+                                                <td>
+                                                    <?php echo esc_html($submission->street); ?><br>
+                                                    <?php echo esc_html($submission->city . ', ' . $submission->zipcode); ?>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                                
+                                <!-- Service Info -->
+                                <div class="postbox">
+                                    <div class="postbox-header"><h2 class="hndle">Service Details</h2></div>
+                                    <div class="inside">
+                                        <table class="form-table" style="margin-top: 0;">
+                                            <tr>
+                                                <th scope="row">Cleaning Type:</th>
+                                                <td><strong><?php echo esc_html($submission->cleaning_type); ?></strong></td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">Preferred Date:</th>
+                                                <td><?php echo esc_html(date('F j, Y', strtotime($submission->service_date))); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">Property Size:</th>
+                                                <td><?php echo esc_html($submission->square_footage); ?> sq ft</td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">Workers Assigned:</th>
+                                                <td><?php echo esc_html($submission->workers); ?></td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row">Add-On Services:</th>
+                                                <td>
+                                                    <?php 
+                                                    $addons = array();
+                                                    if ($submission->addon_oven) $addons[] = 'Inside Oven Cleaning';
+                                                    if ($submission->addon_fridge) $addons[] = 'Inside Fridge Cleaning';
+                                                    
+                                                    if (!empty($addons)) {
+                                                        echo '<ul style="margin: 0; padding-left: 15px; list-style-type: disc;">';
+                                                        foreach ($addons as $addon) {
+                                                            echo '<li>' . esc_html($addon) . '</li>';
+                                                        }
+                                                        echo '</ul>';
+                                                    } else {
+                                                        echo 'None';
+                                                    }
+                                                    ?>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Sidebar Column -->
+                            <div id="postbox-container-1" class="postbox-container">
+                                <div class="postbox">
+                                    <div class="postbox-header"><h2 class="hndle">Payment Information</h2></div>
+                                    <div class="inside">
+                                        <p><strong>Total Amount:</strong> <span style="font-size: 1.2em; font-weight: bold;">$<?php echo esc_html($submission->total_price); ?></span></p>
+                                        
+                                        <p><strong>Base Price:</strong> $<?php echo esc_html($submission->base_price); ?></p>
+                                        <p><strong>Add-ons Price:</strong> $<?php echo esc_html($submission->addon_price); ?></p>
+                                        
+                                        <hr>
+                                        
+                                        <p><strong>Status:</strong> 
+                                            <span style="background: <?php echo $status_color; ?>; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: bold; text-transform: uppercase; font-size: 11px;">
+                                                <?php echo esc_html($submission->payment_status); ?>
+                                            </span>
+                                        </p>
+                                        
+                                        <?php if ($submission->payment_intent_id): ?>
+                                            <p><strong>Transaction ID:</strong><br><code style="word-break: break-all;"><?php echo esc_html($submission->payment_intent_id); ?></code></p>
+                                        <?php endif; ?>
+                                        
+                                        <hr>
+                                        
+                                        <p><strong>Submitted On:</strong><br>
+                                        <?php echo esc_html(date('F j, Y \a\t g:i a', strtotime($submission->created_at))); ?></p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+                <?php
+            } else {
+                echo '<div class="notice notice-error"><p>Submission not found.</p></div>';
+            }
+            return; // Stop execution here for single view
+        }
         
+        // List view (default)
+        $submissions = $wpdb->get_results("SELECT * FROM $table_name ORDER BY created_at DESC");
         ?>
         <div class="wrap">
-            <h1>Form Submissions</h1>
+            <h1 class="wp-heading-inline">Form Submissions</h1>
             <table class="wp-list-table widefat fixed striped">
                 <thead>
                     <tr>
-                        <th>ID</th>
+                        <th width="50">ID</th>
                         <th>Name</th>
                         <th>Email</th>
                         <th>Cleaning Type</th>
                         <th>Service Date</th>
-                        <th>Time</th>
                         <th>Price</th>
                         <th>Payment Status</th>
                         <th>Date Submitted</th>
@@ -96,123 +223,33 @@ class MSF_Admin {
                             <tr>
                                 <td><?php echo esc_html($submission->id); ?></td>
                                 <td><?php echo esc_html($submission->first_name . ' ' . $submission->last_name); ?></td>
-                                <td><?php echo esc_html($submission->email); ?></td>
+                                <td><a href="mailto:<?php echo esc_attr($submission->email); ?>"><?php echo esc_html($submission->email); ?></a></td>
                                 <td><?php echo esc_html($submission->cleaning_type); ?></td>
                                 <td><?php echo esc_html($submission->service_date); ?></td>
-                                <td><?php echo esc_html(date('g:i A', strtotime($submission->service_start_time)) . ' - ' . date('g:i A', strtotime($submission->service_end_time))); ?></td>
                                 <td>$<?php echo esc_html($submission->total_price); ?></td>
-                                <td><?php echo esc_html(ucfirst($submission->payment_status)); ?></td>
-                                <td><?php echo esc_html($submission->created_at); ?></td>
                                 <td>
-                                    <a href="?page=multistep-form&action=view&id=<?php echo $submission->id; ?>">View</a> | 
-                                    <a href="?page=multistep-form&action=delete&id=<?php echo $submission->id; ?>" onclick="return confirm('Are you sure?')">Delete</a>
+                                    <?php if ($submission->payment_status === 'completed'): ?>
+                                        <span style="color: #46b450; font-weight: bold;">Completed</span>
+                                    <?php else: ?>
+                                        <span style="color: #ffb900; font-weight: bold;"><?php echo esc_html(ucfirst($submission->payment_status)); ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo esc_html(date('Y-m-d H:i', strtotime($submission->created_at))); ?></td>
+                                <td>
+                                    <a href="?page=multistep-form&action=view&id=<?php echo $submission->id; ?>" class="button button-small">View</a>
+                                    <a href="?page=multistep-form&action=delete&id=<?php echo $submission->id; ?>" class="button button-small button-link-delete" onclick="return confirm('Are you sure?')">Delete</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10">No submissions found.</td>
+                            <td colspan="9">No submissions found.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
         <?php
-        
-        // View single submission
-        if (isset($_GET['action']) && $_GET['action'] === 'view' && isset($_GET['id'])) {
-            $id = intval($_GET['id']);
-            $submission = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));
-            
-            if ($submission) {
-                ?>
-                <div class="wrap" style="margin-top: 20px;">
-                    <h2>Submission Details</h2>
-                    <table class="form-table">
-                        <tr>
-                            <th>First Name</th>
-                            <td><?php echo esc_html($submission->first_name); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Last Name</th>
-                            <td><?php echo esc_html($submission->last_name); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Phone</th>
-                            <td><?php echo esc_html($submission->phone); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Email</th>
-                            <td><?php echo esc_html($submission->email); ?></td>
-                        </tr>
-                        <tr>
-                            <th>street</th>
-                            <td><?php echo esc_html($submission->street); ?></td>
-                        </tr>
-                        <tr>
-                            <th>City</th>
-                            <td><?php echo esc_html($submission->city); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Zipcode</th>
-                            <td><?php echo esc_html($submission->zipcode); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Cleaning Type</th>
-                            <td><?php echo esc_html($submission->cleaning_type); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Service Date</th>
-                            <td><?php echo esc_html($submission->service_date); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Service Time</th>
-                            <td><?php echo esc_html(date('g:i A', strtotime($submission->service_start_time)) . ' - ' . date('g:i A', strtotime($submission->service_end_time))); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Square Footage</th>
-                            <td><?php echo esc_html($submission->square_footage); ?> sq ft</td>
-                        </tr>
-                        <tr>
-                            <th>Workers Needed</th>
-                            <td><?php echo esc_html($submission->workers); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Add-Ons</th>
-                            <td>
-                                <?php 
-                                $addons = array();
-                                if ($submission->addon_oven) $addons[] = 'Inside Oven Cleaning';
-                                if ($submission->addon_fridge) $addons[] = 'Inside Fridge Cleaning';
-                                echo $addons ? implode(', ', $addons) : 'None';
-                                ?>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Base Price</th>
-                            <td>$<?php echo esc_html($submission->base_price); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Add-on Price</th>
-                            <td>$<?php echo esc_html($submission->addon_price); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Total Price</th>
-                            <td><strong>$<?php echo esc_html($submission->total_price); ?></strong></td>
-                        </tr>
-                        <tr>
-                            <th>Payment Status</th>
-                            <td><?php echo esc_html(ucfirst($submission->payment_status)); ?></td>
-                        </tr>
-                        <tr>
-                            <th>Payment Intent ID</th>
-                            <td><?php echo esc_html($submission->payment_intent_id); ?></td>
-                        </tr>
-                    </table>
-                </div>
-                <?php
-            }
-        }
     }
     
     public function settings_page() {
@@ -234,13 +271,8 @@ class MSF_Admin {
         }
         
         if (isset($_POST['submit']) && check_admin_referer('msf_settings_update', 'msf_settings_nonce')) {
-            // Update Stripe keys
-            update_option('msf_stripe_publishable_key', sanitize_text_field($_POST['msf_stripe_publishable_key']));
-            update_option('msf_stripe_secret_key', sanitize_text_field($_POST['msf_stripe_secret_key']));
+            // Update admin email
             update_option('msf_admin_email', sanitize_email($_POST['msf_admin_email']));
-            
-            // Update payment gateway
-            update_option('msf_payment_gateway', sanitize_text_field($_POST['msf_payment_gateway']));
             
             // Update QuickBooks settings
             update_option('msf_qbo_client_id', sanitize_text_field($_POST['msf_qbo_client_id']));
@@ -276,47 +308,6 @@ class MSF_Admin {
             <h1>Multistep Form Settings</h1>
             <form method="post" action="">
                 <?php wp_nonce_field('msf_settings_update', 'msf_settings_nonce'); ?>
-                
-                <h2>Payment Gateway</h2>
-                <table class="form-table">
-                    <tr>
-                        <th scope="row"><label>Select Payment Gateway</label></th>
-                        <td>
-                            <label style="display: inline-block; margin-right: 20px;">
-                                <input type="radio" name="msf_payment_gateway" value="stripe" 
-                                       <?php checked(get_option('msf_payment_gateway', 'stripe'), 'stripe'); ?>>
-                                Stripe
-                            </label>
-                            <label style="display: inline-block;">
-                                <input type="radio" name="msf_payment_gateway" value="quickbooks" 
-                                       <?php checked(get_option('msf_payment_gateway'), 'quickbooks'); ?>>
-                                QuickBooks
-                            </label>
-                        </td>
-                    </tr>
-                </table>
-                
-                <h2>Stripe Configuration</h2>
-                <table class="form-table">
-                    <tr>
-                        <th scope="row"><label for="msf_stripe_publishable_key">Stripe Publishable Key</label></th>
-                        <td>
-                            <input type="text" id="msf_stripe_publishable_key" name="msf_stripe_publishable_key" 
-                                   value="<?php echo esc_attr(get_option('msf_stripe_publishable_key')); ?>" 
-                                   class="regular-text" />
-                            <p class="description">Enter your Stripe publishable key (starts with pk_)</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="msf_stripe_secret_key">Stripe Secret Key</label></th>
-                        <td>
-                            <input type="text" id="msf_stripe_secret_key" name="msf_stripe_secret_key" 
-                                   value="<?php echo esc_attr(get_option('msf_stripe_secret_key')); ?>" 
-                                   class="regular-text" />
-                            <p class="description">Enter your Stripe secret key (starts with sk_)</p>
-                        </td>
-                    </tr>
-                </table>
                 
                 <h2>QuickBooks Configuration</h2>
                 <table class="form-table">
