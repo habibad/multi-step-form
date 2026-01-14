@@ -126,16 +126,8 @@ class MSF_Ajax {
             );
             
             if ($inserted) {
-                // Send emails
-                $email_handler = new MSF_Email();
-                $email_handler->send_admin_notification($wpdb->insert_id);
-                $email_handler->send_user_confirmation($email, array(
-                    'first_name' => $first_name,
-                    'last_name' => $last_name,
-                    'cleaning_type' => $cleaning_type,
-                    'service_date' => $service_date,
-                    'total_price' => $total_price
-                ));
+                // Schedule async email sending (improves performance)
+                wp_schedule_single_event(time(), 'msf_async_send_emails', array($wpdb->insert_id));
                 
                 wp_send_json_success(array('message' => 'Payment successful!'));
             } else {

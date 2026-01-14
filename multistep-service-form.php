@@ -51,6 +51,9 @@ function msf_init() {
     // Initialize AJAX handlers
     new MSF_Ajax();
 }
+// Async email handler hook
+add_action('msf_async_send_emails', array('MSF_Email', 'handle_cron_emails'));
+
 add_action('plugins_loaded', 'msf_init');
 
 // Enqueue scripts and styles

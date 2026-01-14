@@ -116,7 +116,7 @@ class MSF_Shortcode {
                             </div>
                             
                             <div class="msf-form-group">
-                                <label for="service_date">Service Date *</label>
+                                <label for="service_date">Service Date * ( Our Service time 8AM to 7PM )</label>
                                 <input type="date" id="service_date" name="service_date" required>
                             </div>
                             
