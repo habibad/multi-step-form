@@ -49,10 +49,6 @@ class MSF_Admin {
         register_setting('msf_settings_group', 'msf_admin_email');
         register_setting('msf_settings_group', 'msf_pricing');
         register_setting('msf_settings_group', 'msf_addon_pricing');
-        register_setting('msf_settings_group', 'msf_qbo_client_id');
-        register_setting('msf_settings_group', 'msf_qbo_client_secret');
-        register_setting('msf_settings_group', 'msf_qbo_base_url');
-        register_setting('msf_settings_group', 'msf_qbo_service_item_id');
     }
     
     public function submissions_page() {
@@ -176,9 +172,6 @@ class MSF_Admin {
                                             </span>
                                         </p>
                                         
-                                        <?php if ($submission->payment_intent_id): ?>
-                                            <p><strong>Transaction ID:</strong><br><code style="word-break: break-all;"><?php echo esc_html($submission->payment_intent_id); ?></code></p>
-                                        <?php endif; ?>
                                         
                                         <hr>
                                         
@@ -256,29 +249,11 @@ class MSF_Admin {
         $pricing = json_decode(get_option('msf_pricing'), true);
         $addon_pricing = json_decode(get_option('msf_addon_pricing'), true);
         
-        // Handle QuickBooks disconnect
-        if (isset($_POST['disconnect_qbo']) && check_admin_referer('msf_qbo_disconnect', 'msf_qbo_disconnect_nonce')) {
-            delete_option('msf_qbo_access_token');
-            delete_option('msf_qbo_refresh_token');
-            delete_option('msf_qbo_realm_id');
-            delete_option('msf_qbo_token_expires');
-            echo '<div class="notice notice-success"><p>Disconnected from QuickBooks. Please connect again.</p></div>';
-        }
-        
-        // Show QuickBooks connection success
-        if (isset($_GET['qbo_status']) && $_GET['qbo_status'] === 'success') {
-            echo '<div class="notice notice-success"><p>Successfully connected to QuickBooks!</p></div>';
-        }
         
         if (isset($_POST['submit']) && check_admin_referer('msf_settings_update', 'msf_settings_nonce')) {
             // Update admin email
             update_option('msf_admin_email', sanitize_email($_POST['msf_admin_email']));
             
-            // Update QuickBooks settings
-            update_option('msf_qbo_client_id', sanitize_text_field($_POST['msf_qbo_client_id']));
-            update_option('msf_qbo_client_secret', sanitize_text_field($_POST['msf_qbo_client_secret']));
-            update_option('msf_qbo_base_url', sanitize_text_field($_POST['msf_qbo_base_url']));
-            update_option('msf_qbo_service_item_id', sanitize_text_field($_POST['msf_qbo_service_item_id']));
             
             // Update pricing
             $new_pricing = array();
@@ -309,78 +284,6 @@ class MSF_Admin {
             <form method="post" action="">
                 <?php wp_nonce_field('msf_settings_update', 'msf_settings_nonce'); ?>
                 
-                <h2>QuickBooks Configuration</h2>
-                <table class="form-table">
-                    <tr>
-                        <th scope="row"><label for="msf_qbo_client_id">QuickBooks Client ID</label></th>
-                        <td>
-                            <input type="text" id="msf_qbo_client_id" name="msf_qbo_client_id" 
-                                   value="<?php echo esc_attr(get_option('msf_qbo_client_id')); ?>" 
-                                   class="regular-text" />
-                            <p class="description">Enter your QuickBooks app Client ID</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="msf_qbo_client_secret">QuickBooks Client Secret</label></th>
-                        <td>
-                            <input type="text" id="msf_qbo_client_secret" name="msf_qbo_client_secret" 
-                                   value="<?php echo esc_attr(get_option('msf_qbo_client_secret')); ?>" 
-                                   class="regular-text" />
-                            <p class="description">Enter your QuickBooks app Client Secret</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="msf_qbo_base_url">Environment</label></th>
-                        <td>
-                            <select name="msf_qbo_base_url" id="msf_qbo_base_url">
-                                <option value="Development" <?php selected(get_option('msf_qbo_base_url', 'Development'), 'Development'); ?>>
-                                    Development (Sandbox)
-                                </option>
-                                <option value="Production" <?php selected(get_option('msf_qbo_base_url'), 'Production'); ?>>
-                                    Production
-                                </option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row"><label for="msf_qbo_service_item_id">Service Item ID</label></th>
-                        <td>
-                            <input type="text" id="msf_qbo_service_item_id" name="msf_qbo_service_item_id" 
-                                   value="<?php echo esc_attr(get_option('msf_qbo_service_item_id', '1')); ?>" 
-                                   class="regular-text" />
-                            <p class="description">The QuickBooks Item ID to use for sales receipts (default: 1)</p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th scope="row">Redirect URI</th>
-                        <td>
-                            <code><?php echo esc_html(site_url('/msf-qbo-callback/')); ?></code>
-                            <p class="description">Add this URL to your QuickBooks App "Keys & OAuth" → "Redirect URIs"</p>
-                        </td>
-                    </tr>
-                </table>
-                
-                <?php if (get_option('msf_qbo_client_id') && get_option('msf_qbo_client_secret')): ?>
-                    <?php if (get_option('msf_qbo_access_token')): ?>
-                        <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 4px; margin: 15px 0;">
-                            <span style="color: #155724; font-weight: bold; font-size: 1.1em;">✓ QuickBooks Connected</span>
-                            <p style="margin: 10px 0;">You are connected to QuickBooks.</p>
-                            <form method="post" style="display:inline;">
-                                <?php wp_nonce_field('msf_qbo_disconnect', 'msf_qbo_disconnect_nonce'); ?>
-                                <button type="submit" name="disconnect_qbo" class="button">Disconnect QuickBooks</button>
-                            </form>
-                            <a href="<?php echo esc_url(MSF_QuickBooks::get_auth_url()); ?>" class="button button-primary" style="margin-left: 5px;">
-                                Re-Connect QuickBooks
-                            </a>
-                        </div>
-                    <?php else: ?>
-                        <div style="margin: 15px 0;">
-                            <a href="<?php echo esc_url(MSF_QuickBooks::get_auth_url()); ?>" class="button button-primary">
-                                Connect to QuickBooks
-                            </a>
-                        </div>
-                    <?php endif; ?>
-                <?php endif; ?>
                 
                 <h2>Email Settings</h2>
                 <table class="form-table">

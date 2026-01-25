@@ -34,10 +34,6 @@ class MSF_Shortcode {
                             <div class="msf-step-number">2</div>
                             <div class="msf-step-label">Service Info</div>
                         </div>
-                        <div class="msf-progress-step" data-step="3">
-                            <div class="msf-step-number">3</div>
-                            <div class="msf-step-label">Review & Payment</div>
-                        </div>
                     </div>
                     
                     <form id="msf-multistep-form" enctype="multipart/form-data">
@@ -116,7 +112,7 @@ class MSF_Shortcode {
                             </div>
                             
                             <div class="msf-form-group">
-                                <label for="service_date">Service Date *</label>
+                                <label for="service_date">Service Date * ( Our Service time 8AM to 7PM )</label>
                                 <input type="date" id="service_date" name="service_date" required>
                             </div>
                             
@@ -162,77 +158,21 @@ class MSF_Shortcode {
                                 </div>
                             </div>
                             
-                            <div class="msf-form-buttons">
-                                <button type="button" class="msf-btn msf-btn-prev">Previous</button>
-                                <button type="button" class="msf-btn msf-btn-next">Next</button>
-                            </div>
-                        </div>
-                        
-                        <!-- Step 3: Review & Payment -->
-                        <div class="msf-step msf-step-3">
-                            <h2>Review & Payment</h2>
-                            
-                            <div class="msf-review-section">
-                                <h3>Review Your Information</h3>
-                                <div id="msf-review-content"></div>
-                            </div>
-                            
-                            <div class="msf-payment-section">
-                                <h3>Payment Details</h3>
-                                
-                                <div id="quickbooks-payment-form">
-                                    <?php 
-                                    $ac_number = is_ssl() ? 'cc-number' : 'off';
-                                    $ac_exp = is_ssl() ? 'cc-exp' : 'off';
-                                    $ac_cvc = is_ssl() ? 'cc-csc' : 'off';
-                                    ?>
-                                    <div class="msf-form-group">
-                                        <label for="qbo_card_number">Card Number *</label>
-                                        <input type="text" id="qbo_card_number" name="qbo_card_number" 
-                                               placeholder="0000 0000 0000 0000" required 
-                                               autocomplete="<?php echo $ac_number; ?>"
-                                               maxlength="19">
-                                    </div>
-                                    
-                                    <div class="msf-form-row">
-                                        <div class="msf-form-group">
-                                            <label for="qbo_card_exp">Expiry (MM/YYYY) *</label>
-                                            <input type="text" id="qbo_card_exp" name="qbo_card_exp" 
-                                                   placeholder="MM/YYYY" required 
-                                                   autocomplete="<?php echo $ac_exp; ?>"
-                                                   maxlength="7">
-                                        </div>
-                                        <div class="msf-form-group">
-                                            <label for="qbo_card_cvc">CVC *</label>
-                                            <input type="text" id="qbo_card_cvc" name="qbo_card_cvc" 
-                                                   placeholder="123" required 
-                                                   autocomplete="<?php echo $ac_cvc; ?>"
-                                                   maxlength="4">
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="msf-form-group">
-                                        <label for="qbo_billing_address">Billing Address</label>
-                                        <input type="text" id="qbo_billing_address" name="qbo_billing_address" 
-                                               placeholder="123 Main St">
-                                    </div>
-                                    
-                                    <div id="qbo-errors" class="msf-error"></div>
-                                </div>
-                            </div>
+                            <div id="booking-errors" class="msf-error"></div>
                             
                             <div class="msf-form-buttons">
                                 <button type="button" class="msf-btn msf-btn-prev">Previous</button>
                                 <button type="submit" class="msf-btn msf-btn-submit" id="submit-payment">
-                                    Pay $<span id="final_price">0.00</span>
+                                    Submit Booking
                                 </button>
                             </div>
                         </div>
+                        
                     </form>
                     
                     <div class="msf-success-message" style="display: none;">
                         <div class="msf-success-icon">✓</div>
-                        <h2>Payment Successful!</h2>
+                        <h2>Booking Successful!</h2>
                         <p>Thank you for your submission. You will receive a confirmation email shortly.</p>
                     </div>
                 </div>

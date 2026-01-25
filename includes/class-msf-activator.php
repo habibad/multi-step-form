@@ -37,8 +37,8 @@ class MSF_Activator {
             base_price decimal(10,2) NOT NULL,
             addon_price decimal(10,2) DEFAULT 0,
             total_price decimal(10,2) NOT NULL,
+            total_price decimal(10,2) NOT NULL,
             payment_status varchar(50) DEFAULT 'pending',
-            payment_intent_id varchar(255),
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id)
         ) $charset_collate;";
@@ -57,22 +57,6 @@ class MSF_Activator {
             add_option('msf_admin_email', get_option('admin_email'));
         }
         
-        // QuickBooks Options
-        if (!get_option('msf_payment_gateway')) {
-            add_option('msf_payment_gateway', 'stripe'); // Default to Stripe
-        }
-        if (!get_option('msf_qbo_client_id')) {
-            add_option('msf_qbo_client_id', '');
-        }
-        if (!get_option('msf_qbo_client_secret')) {
-            add_option('msf_qbo_client_secret', '');
-        }
-        if (!get_option('msf_qbo_base_url')) {
-            add_option('msf_qbo_base_url', 'Development');
-        }
-        if (!get_option('msf_qbo_service_item_id')) {
-            add_option('msf_qbo_service_item_id', '1');
-        }
         
         // Pricing options based on PDF
         if (!get_option('msf_pricing')) {

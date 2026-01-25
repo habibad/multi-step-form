@@ -44,105 +44,42 @@ class MSF_Ajax {
         $addon_price = floatval($_POST['addon_price']);
         $total_price = floatval($_POST['total_price']);
         
-        // Process QuickBooks payment
-        $this->process_quickbooks_payment($first_name, $last_name, $phone, $email, $street, $city, $zipcode, 
-                                          $cleaning_type, $service_date, $service_start_time, $service_end_time,
-                                          $square_footage, $workers, $addon_oven, $addon_fridge, 
-                                          $base_price, $addon_price, $total_price);
-    }
-    
-    private function process_quickbooks_payment($first_name, $last_name, $phone, $email, $street, $city, $zipcode,
-                                               $cleaning_type, $service_date, $service_start_time, $service_end_time,
-                                               $square_footage, $workers, $addon_oven, $addon_fridge,
-                                               $base_price, $addon_price, $total_price) {
-        global $wpdb;
-        
-        // Get QuickBooks payment data
-        $card_number = preg_replace('/\D/', '', $_POST['qbo_card_number']);
-        $card_exp = sanitize_text_field($_POST['qbo_card_exp']);
-        $card_cvc = sanitize_text_field($_POST['qbo_card_cvc']);
-        $billing_address = sanitize_text_field($_POST['qbo_billing_address']);
-        
-        // Parse expiry
-        $exp_parts = explode('/', $card_exp);
-        if (count($exp_parts) !== 2) {
-            wp_send_json_error(array('message' => 'Invalid Expiry Date format. Use MM/YYYY.'));
-        }
-        
-        $exp_month = trim($exp_parts[0]);
-        $exp_year = trim($exp_parts[1]);
-        
-        // Normalize year to 4 digits
-        if (strlen($exp_year) === 2) {
-            $exp_year = '20' . $exp_year;
-        }
-        
-        // Prepare payment data
-        $payment_data = array(
-            'amount' => $total_price,
-            'card_number' => $card_number,
-            'exp_month' => $exp_month,
-            'exp_year' => $exp_year,
-            'cvc' => $card_cvc,
-            'card_holder_name' => $first_name . ' ' . $last_name,
-            'zip_code' => $zipcode,
-            'billing_address' => $billing_address,
-            'customer_name' => $first_name . ' ' . $last_name,
-            'customer_email' => $email,
-            'cleaning_type' => $cleaning_type
+        // Save to database
+        $table_name = $wpdb->prefix . 'msf_submissions';
+        $inserted = $wpdb->insert(
+            $table_name,
+            array(
+                'first_name' => $first_name,
+                'last_name' => $last_name,
+                'phone' => $phone,
+                'email' => $email,
+                'street' => $street,
+                'city' => $city,
+                'zipcode' => $zipcode,
+                'cleaning_type' => $cleaning_type,
+                'service_date' => $service_date,
+                'service_start_time' => $service_start_time,
+                'service_end_time' => $service_end_time,
+                'square_footage' => $square_footage,
+                'workers' => $workers,
+                'addon_oven' => $addon_oven,
+                'addon_fridge' => $addon_fridge,
+                'base_price' => $base_price,
+                'addon_price' => $addon_price,
+                'total_price' => $total_price,
+                'payment_status' => 'completed', // Marked as completed since no payment required
+                'payment_intent_id' => ''
+            ),
+            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%f', '%f', '%f', '%s', '%s')
         );
         
-        // Process QuickBooks payment
-        $result = MSF_QuickBooks::process_payment($payment_data);
-        
-        if ($result['success']) {
-            // Save to database
-            $table_name = $wpdb->prefix . 'msf_submissions';
-            $inserted = $wpdb->insert(
-                $table_name,
-                array(
-                    'first_name' => $first_name,
-                    'last_name' => $last_name,
-                    'phone' => $phone,
-                    'email' => $email,
-                    'street' => $street,
-                    'city' => $city,
-                    'zipcode' => $zipcode,
-                    'cleaning_type' => $cleaning_type,
-                    'service_date' => $service_date,
-                    'service_start_time' => $service_start_time,
-                    'service_end_time' => $service_end_time,
-                    'square_footage' => $square_footage,
-                    'workers' => $workers,
-                    'addon_oven' => $addon_oven,
-                    'addon_fridge' => $addon_fridge,
-                    'base_price' => $base_price,
-                    'addon_price' => $addon_price,
-                    'total_price' => $total_price,
-                    'payment_status' => 'completed',
-                    'payment_intent_id' => $result['transaction_id']
-                ),
-                array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%f', '%f', '%f', '%s', '%s')
-            );
+        if ($inserted) {
+            // Schedule async email sending (improves performance)
+            wp_schedule_single_event(time(), 'msf_async_send_emails', array($wpdb->insert_id));
             
-            if ($inserted) {
-                // Send emails
-                $email_handler = new MSF_Email();
-                $email_handler->send_admin_notification($wpdb->insert_id);
-                $email_handler->send_user_confirmation($email, array(
-                    'first_name' => $first_name,
-                    'last_name' => $last_name,
-                    'cleaning_type' => $cleaning_type,
-                    'service_date' => $service_date,
-                    'total_price' => $total_price
-                ));
-                
-                wp_send_json_success(array('message' => 'Payment successful!'));
-            } else {
-                wp_send_json_error(array('message' => 'Failed to save submission.'));
-            }
+            wp_send_json_success(array('message' => 'Booking successful!'));
         } else {
-            wp_send_json_error(array('message' => $result['message']));
+            wp_send_json_error(array('message' => 'Failed to save submission.'));
         }
     }
 }

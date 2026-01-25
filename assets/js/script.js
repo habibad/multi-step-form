@@ -45,10 +45,6 @@
             updatePreviewAddons();
         });
         
-        // QuickBooks card formatting
-        $('#qbo_card_number').on('input', formatCardNumber);
-        $('#qbo_card_exp').on('input', formatCardExpiry);
-        $('#qbo_card_cvc').on('input', formatCardCVC);
         
         // Navigation buttons
         $('.msf-btn-next').on('click', nextStep);
@@ -67,10 +63,6 @@
             
             $('.msf-step-' + currentStep).addClass('active');
             $('.msf-progress-step[data-step="' + currentStep + '"]').addClass('active');
-            
-            if (currentStep === 3) {
-                populateReview();
-            }
             
             scrollToTop();
         }
@@ -238,79 +230,15 @@
         $('#preview-price').text($('#calculated_price').text());
     }
     
-    function populateReview() {
-        const addons = [];
-        if ($('#addon_oven').is(':checked')) {
-            addons.push('Inside Oven Cleaning (+$' + addonPricingData.oven + ')');
-        }
-        if ($('#addon_fridge').is(':checked')) {
-            addons.push('Inside Fridge Cleaning (+$' + addonPricingData.fridge + ')');
-        }
-        
-        const reviewHtml = `
-            <div class="msf-review-group">
-                <h4>Personal Information</h4>
-                <p><strong>Name:</strong> ${$('#first_name').val()} ${$('#last_name').val()}</p>
-                <p><strong>Email:</strong> ${$('#email').val()}</p>
-                <p><strong>Phone:</strong> ${$('#phone').val()}</p>
-                <p><strong>Address:</strong> ${$('#city').val()}, ${$('#street').val()} ${$('#zipcode').val()}</p>
-            </div>
-            <div class="msf-review-group">
-                <h4>Service Details</h4>
-                <p><strong>Cleaning Type:</strong> ${$('#cleaning_type').val()}</p>
-                <p><strong>Service Date:</strong> ${$('#service_date').val()}</p>
-                <p><strong>Square Footage:</strong> ${$('#square_footage').val()} sq ft</p>
-                <p><strong>Workers Needed:</strong> ${$('#workers').val()}</p>
-                <p><strong>Add-on Services:</strong> ${addons.length > 0 ? addons.join(', ') : 'None'}</p>
-            </div>
-            <div class="msf-review-group">
-                <h4>Price Breakdown</h4>
-                <p><strong>Base Price:</strong> $${$('#base_price').text()}</p>
-                <p><strong>Add-ons:</strong> $${$('#addon_total').text()}</p>
-            </div>
-            <div class="msf-review-group msf-review-total">
-                <h4>Total Price</h4>
-                <p class="msf-review-price">$${$('#calculated_price').text()}</p>
-            </div>
-        `;
-        
-        $('#msf-review-content').html(reviewHtml);
-    }
     
-    async function handleSubmit(e) {
+    function handleSubmit(e) {
         e.preventDefault();
-        await handleQuickBooksSubmit();
-    }
-    
-    async function handleQuickBooksSubmit() {
+        
         const submitButton = $('#submit-payment');
         submitButton.prop('disabled', true).text('Processing...');
         
-        // Validate QuickBooks fields
-        const cardNumber = $('#qbo_card_number').val().replace(/\s/g, '');
-        const cardExp = $('#qbo_card_exp').val();
-        const cardCvc = $('#qbo_card_cvc').val();
-        
-        if (!cardNumber || cardNumber.length < 13) {
-            $('#qbo-errors').text('Please enter a valid card number');
-            submitButton.prop('disabled', false).text('Pay $' + $('#final_price').text());
-            return;
-        }
-        
-        if (!cardExp || !cardExp.match(/^\d{2}\/\d{4}$/)) {
-            $('#qbo-errors').text('Please enter expiry in MM/YYYY format');
-            submitButton.prop('disabled', false).text('Pay $' + $('#final_price').text());
-            return;
-        }
-        
-        if (!cardCvc || cardCvc.length < 3) {
-            $('#qbo-errors').text('Please enter a valid CVC');
-            submitButton.prop('disabled', false).text('Pay $' + $('#final_price').text());
-            return;
-        }
-        
         // Clear errors
-        $('#qbo-errors').text('');
+        $('#booking-errors').text('');
         
         // Prepare form data
         const formDataObj = new FormData();
@@ -332,10 +260,6 @@
         formDataObj.append('base_price', $('#base_price').text());
         formDataObj.append('addon_price', $('#addon_total').text());
         formDataObj.append('total_price', $('#calculated_price').text());
-        formDataObj.append('qbo_card_number', cardNumber);
-        formDataObj.append('qbo_card_exp', cardExp);
-        formDataObj.append('qbo_card_cvc', cardCvc);
-        formDataObj.append('qbo_billing_address', $('#qbo_billing_address').val() || '');
         
         // Submit to server
         $.ajax({
@@ -348,33 +272,15 @@
                 if (response.success) {
                     showSuccess();
                 } else {
-                    $('#qbo-errors').text(response.data.message || 'Payment failed. Please try again.');
-                    submitButton.prop('disabled', false).text('Pay $' + $('#final_price').text());
+                    $('#booking-errors').text(response.data.message || 'Submission failed. Please try again.');
+                    submitButton.prop('disabled', false).text('Submit Booking');
                 }
             },
             error: function() {
-                $('#qbo-errors').text('An error occurred. Please try again.');
-                submitButton.prop('disabled', false).text('Pay $' + $('#final_price').text());
+                $('#booking-errors').text('An error occurred. Please try again.');
+                submitButton.prop('disabled', false).text('Submit Booking');
             }
         });
-    }
-    
-    function formatCardNumber(e) {
-        let value = e.target.value.replace(/\s/g, '');
-        let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
-        e.target.value = formattedValue;
-    }
-    
-    function formatCardExpiry(e) {
-        let value = e.target.value.replace(/\D/g, '');
-        if (value.length >= 2) {
-            value = value.substring(0, 2) + '/' + value.substring(2, 6);
-        }
-        e.target.value = value;
-    }
-    
-    function formatCardCVC(e) {
-        e.target.value = e.target.value.replace(/\D/g, '').substring(0, 4);
     }
     
     function showSuccess() {

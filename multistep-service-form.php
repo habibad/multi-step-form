@@ -1,11 +1,13 @@
 <?php
+
 /**
- * Plugin Name: Payment and Service Form
+ * Plugin Name: Service Form
  * Plugin URI: https://example.com
- * Description: A multistep form with live preview and QuickBooks payment integration
+ * Description: A multistep service booking form with live preview
  * Version: 1.0.0
  * Author: Md Anikur Rahman
- * Author URI: https://example.com
+ * Author URI: https://www.linkedin.com/in/anikur-rahman/
+ * Contributors: S M Masrafi (https://www.linkedin.com/in/masrafi000/)
  * License: GPL v2 or later
  * Text Domain: multistep-form
  */
@@ -33,31 +35,35 @@ require_once MSF_PLUGIN_DIR . 'includes/class-msf-admin.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-shortcode.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-ajax.php';
 require_once MSF_PLUGIN_DIR . 'includes/class-msf-email.php';
-require_once MSF_PLUGIN_DIR . 'includes/class-msf-quickbooks.php';
 
 // Activation hook
 register_activation_hook(__FILE__, array('MSF_Activator', 'activate'));
 
 // Initialize the plugin
-function msf_init() {
+function msf_init()
+{
     // Initialize admin
     if (is_admin()) {
         new MSF_Admin();
     }
-    
+
     // Initialize shortcode
     new MSF_Shortcode();
-    
+
     // Initialize AJAX handlers
     new MSF_Ajax();
 }
+// Async email handler hook
+add_action('msf_async_send_emails', array('MSF_Email', 'handle_cron_emails'));
+
 add_action('plugins_loaded', 'msf_init');
 
 // Enqueue scripts and styles
-function msf_enqueue_scripts() {
+function msf_enqueue_scripts()
+{
     wp_enqueue_style('msf-styles', MSF_PLUGIN_URL . 'assets/css/style.css', array(), MSF_VERSION);
     wp_enqueue_script('msf-script', MSF_PLUGIN_URL . 'assets/js/script.js', array('jquery'), MSF_VERSION, true);
-    
+
     // Localize script with AJAX URL and nonce
     wp_localize_script('msf-script', 'msfAjax', array(
         'ajaxurl' => admin_url('admin-ajax.php'),
