@@ -52,8 +52,46 @@
         
         // Form submission
         $('#msf-multistep-form').on('submit', handleSubmit);
+        
+        // Initial button state
+        validateCurrentStep();
+        
+        // Input monitoring for button state
+        $('input, select').on('input change', function() {
+            validateCurrentStep();
+        });
     });
     
+    function validateCurrentStep() {
+        const isValid = validateStep(currentStep); // Helper checks HTML5 validity mostly
+        const nextBtn = $('.msf-btn-next');
+        const submitBtn = $('#submit-payment');
+        
+        // For Step 1: Control Next button
+        if (currentStep === 1) {
+            nextBtn.prop('disabled', !isValid);
+        }
+        
+        // For Step 2: Control Submit button
+        if (currentStep === 2) {
+             // We need to check all required fields in the active step explicitly because
+             // 'validateStep' helper might return true if we just look at the container without active interaction check logic sometimes,
+             // but here we reuse validateStep which checks validity of inputs.
+             // Also need to ensure checking validity doesn't trigger UI error messages prematurely (handled by validity API check mostly).
+             // Let's refine validateStep for silent checking or just use validity.
+             
+             let step2Valid = true;
+             $('.msf-step-2 input[required], .msf-step-2 select[required]').each(function() {
+                 if (!this.checkValidity()) {
+                     step2Valid = false;
+                     return false;
+                 }
+             });
+             
+             submitBtn.prop('disabled', !step2Valid);
+        }
+    }
+
     function nextStep() {
         if (validateStep(currentStep)) {
             $('.msf-step-' + currentStep).removeClass('active');
@@ -65,6 +103,7 @@
             $('.msf-progress-step[data-step="' + currentStep + '"]').addClass('active');
             
             scrollToTop();
+            validateCurrentStep(); // Validate new step state
         }
     }
     
@@ -78,20 +117,24 @@
         $('.msf-progress-step[data-step="' + currentStep + '"]').removeClass('completed').addClass('active');
         
         scrollToTop();
+        validateCurrentStep(); // Validate previous step state
     }
     
     function validateStep(step) {
         let isValid = true;
         const currentStepEl = $('.msf-step-' + step);
         
+        // This function acts as both a validator and an error shower when called on button click
+        // but for disabling buttons we might want a quieter check.
+        // However, standard HTML5 validity is what we rely on.
+        
         currentStepEl.find('input[required], select[required]').each(function() {
             if (!this.checkValidity()) {
                 isValid = false;
-                $(this).addClass('error');
-                this.reportValidity();
+                // Only add error class if we are actively validating (like on next click)
+                // But for button state, we just need the boolean.
+                // The callers 'nextStep' imply active validation.
                 return false;
-            } else {
-                $(this).removeClass('error');
             }
         });
         
@@ -230,7 +273,6 @@
         $('#preview-price').text($('#calculated_price').text());
     }
     
-    
     function handleSubmit(e) {
         e.preventDefault();
         
@@ -272,25 +314,63 @@
                 if (response.success) {
                     showSuccess();
                 } else {
-                    $('#booking-errors').text(response.data.message || 'Submission failed. Please try again.');
+                    Toastify({
+                        text: response.data.message || 'Submission failed. Please try again.',
+                        duration: 6000,
+                        gravity: "top",
+                        position: "right",
+                        className: "error-toast",
+                        stopOnFocus: true,
+                    }).showToast();
+                    
                     submitButton.prop('disabled', false).text('Submit Booking');
+                    validateCurrentStep();
                 }
             },
             error: function() {
-                $('#booking-errors').text('An error occurred. Please try again.');
+                Toastify({
+                    text: 'An error occurred. Please try again.',
+                    duration: 6000,
+                    gravity: "top",
+                    position: "right",
+                    className: "error-toast",
+                    stopOnFocus: true,
+                }).showToast();
+                
                 submitButton.prop('disabled', false).text('Submit Booking');
+                validateCurrentStep();
             }
         });
     }
     
     function showSuccess() {
-        $('#msf-multistep-form').hide();
-        $('.msf-success-message').fadeIn();
+        // Hide form and progress bar
+        $('#msf-multistep-form').fadeOut(300, function() {
+            // Update greeting with name
+            const firstName = $('#first_name').val();
+            const lastName = $('#last_name').val();
+            if (firstName && lastName) {
+                $('.msf-success-message h2').text('Hi ' + firstName + ' ' + lastName + ', Booking Successful!');
+            }
+            
+            // Show success message
+            $('.msf-progress-bar').hide();
+            $('.msf-success-message').fadeIn();
+        });
+
+        Toastify({
+            text: "Thank you! We will contact you within a few hours.",
+            duration: 6000,
+            gravity: "top",
+            position: "right",
+            className: "success-toast",
+            stopOnFocus: true,
+        }).showToast();
         
-        // Reset form after 5 seconds
+        // Reset form after 6 seconds
         setTimeout(function() {
             location.reload();
-        }, 5000);
+        }, 6000);
     }
     
     function scrollToTop() {
