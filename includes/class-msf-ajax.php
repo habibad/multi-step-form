@@ -66,11 +66,9 @@ class MSF_Ajax {
                 'addon_fridge' => $addon_fridge,
                 'base_price' => $base_price,
                 'addon_price' => $addon_price,
-                'total_price' => $total_price,
-                'payment_status' => 'completed', // Marked as completed since no payment required
-                'payment_intent_id' => ''
+                'total_price' => $total_price
             ),
-            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%f', '%f', '%f', '%s', '%s')
+            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%f', '%f', '%f')
         );
         
         if ($inserted) {

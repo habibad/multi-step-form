@@ -37,8 +37,7 @@ class MSF_Activator {
             base_price decimal(10,2) NOT NULL,
             addon_price decimal(10,2) DEFAULT 0,
             total_price decimal(10,2) NOT NULL,
-            total_price decimal(10,2) NOT NULL,
-            payment_status varchar(50) DEFAULT 'pending',
+
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY  (id)
         ) $charset_collate;";

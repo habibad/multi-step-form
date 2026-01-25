@@ -68,7 +68,8 @@ class MSF_Admin {
             $submission = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $id));
             
             if ($submission) {
-                $status_color = $submission->payment_status === 'completed' ? '#46b450' : '#ffb900';
+                // Payment status removed
+
                 ?>
                 <div class="wrap">
                     <h1 class="wp-heading-inline">Submission #<?php echo esc_html($submission->id); ?></h1>
@@ -133,9 +134,17 @@ class MSF_Admin {
                                                 <th scope="row">Add-On Services:</th>
                                                 <td>
                                                     <?php 
+                                                    $addon_prices = json_decode(get_option('msf_addon_pricing'), true);
+                                                    
                                                     $addons = array();
-                                                    if ($submission->addon_oven) $addons[] = 'Inside Oven Cleaning';
-                                                    if ($submission->addon_fridge) $addons[] = 'Inside Fridge Cleaning';
+                                                    if ($submission->addon_oven) {
+                                                        $price = isset($addon_prices['oven']) ? $addon_prices['oven'] : 0;
+                                                        $addons[] = 'Inside Oven Cleaning ($' . number_format($price, 2) . ')';
+                                                    }
+                                                    if ($submission->addon_fridge) {
+                                                        $price = isset($addon_prices['fridge']) ? $addon_prices['fridge'] : 0;
+                                                        $addons[] = 'Inside Fridge Cleaning ($' . number_format($price, 2) . ')';
+                                                    }
                                                     
                                                     if (!empty($addons)) {
                                                         echo '<ul style="margin: 0; padding-left: 15px; list-style-type: disc;">';
@@ -157,7 +166,7 @@ class MSF_Admin {
                             <!-- Sidebar Column -->
                             <div id="postbox-container-1" class="postbox-container">
                                 <div class="postbox">
-                                    <div class="postbox-header"><h2 class="hndle">Payment Information</h2></div>
+                                    <div class="postbox-header"><h2 class="hndle">Pricing Details</h2></div>
                                     <div class="inside">
                                         <p><strong>Total Amount:</strong> <span style="font-size: 1.2em; font-weight: bold;">$<?php echo esc_html($submission->total_price); ?></span></p>
                                         
@@ -166,20 +175,12 @@ class MSF_Admin {
                                         
                                         <hr>
                                         
-                                        <p><strong>Status:</strong> 
-                                            <span style="background: <?php echo $status_color; ?>; color: #fff; padding: 3px 8px; border-radius: 3px; font-weight: bold; text-transform: uppercase; font-size: 11px;">
-                                                <?php echo esc_html($submission->payment_status); ?>
-                                            </span>
-                                        </p>
-                                        
-                                        
-                                        <hr>
-                                        
                                         <p><strong>Submitted On:</strong><br>
                                         <?php echo esc_html(date('F j, Y \a\t g:i a', strtotime($submission->created_at))); ?></p>
                                     </div>
                                 </div>
                             </div>
+
                             
                         </div>
                     </div>
@@ -205,7 +206,7 @@ class MSF_Admin {
                         <th>Cleaning Type</th>
                         <th>Service Date</th>
                         <th>Price</th>
-                        <th>Payment Status</th>
+
                         <th>Date Submitted</th>
                         <th>Actions</th>
                     </tr>
@@ -220,13 +221,7 @@ class MSF_Admin {
                                 <td><?php echo esc_html($submission->cleaning_type); ?></td>
                                 <td><?php echo esc_html($submission->service_date); ?></td>
                                 <td>$<?php echo esc_html($submission->total_price); ?></td>
-                                <td>
-                                    <?php if ($submission->payment_status === 'completed'): ?>
-                                        <span style="color: #46b450; font-weight: bold;">Completed</span>
-                                    <?php else: ?>
-                                        <span style="color: #ffb900; font-weight: bold;"><?php echo esc_html(ucfirst($submission->payment_status)); ?></span>
-                                    <?php endif; ?>
-                                </td>
+
                                 <td><?php echo esc_html(date('Y-m-d H:i', strtotime($submission->created_at))); ?></td>
                                 <td>
                                     <a href="?page=multistep-form&action=view&id=<?php echo $submission->id; ?>" class="button button-small">View</a>
